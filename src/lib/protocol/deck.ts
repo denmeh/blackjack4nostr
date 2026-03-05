@@ -45,8 +45,9 @@ async function shuffledIndexes(seed: string, length: number): Promise<number[]> 
 	let counter = 0;
 	for (let i = length - 1; i > 0; i--) {
 		const bytes = await hashStep(seed, counter++);
-		// uint32 in [0, i+1)
-		const r = readUint32(bytes, 0) % (i + 1);
+		// uint32 in [0, i+1): JS bitwise ops are signed, so use >>> 0 for unsigned mod
+		const raw = readUint32(bytes, 0);
+		const r = (raw >>> 0) % (i + 1);
 		[indexes[i], indexes[r]] = [indexes[r]!, indexes[i]!];
 	}
 	return indexes;

@@ -4,10 +4,11 @@
 	import { writable, get } from 'svelte/store';
 	import { goto } from '$app/navigation';
 	import { getNostrSdk } from '$lib/nostr';
-	import { fetchGameCreate, publishGameJoin, subscribeGameEvents, publishGameAction } from '$lib/game/events';
+	import { fetchGameCreate, publishGameJoin, subscribeGameEvents, publishGameAction, publishPlayAgain } from '$lib/game/events';
 	import { PublicKey } from '@rust-nostr/nostr-sdk';
 	import { handValue } from '$lib/protocol/game-logic';
 	import type { GameStatePayload } from '$lib/protocol/types';
+	import GameCard from '$lib/components/Card.svelte';
 
 	const npub = $page.url.searchParams.get('npub');
 	const token = $page.url.searchParams.get('token');
@@ -17,10 +18,12 @@
 	let status = writable<'loading' | 'ready' | 'joined' | 'error'>('loading');
 	let error = writable<string | null>(null);
 	let gameEventId = writable<string | null>(null);
-	let state = writable<GameStatePayload | null>(null);
+	let gameState = writable<GameStatePayload | null>(null);
 	let unsub = writable<(() => void) | null>(null);
 	/** True after player sent hit/stand, until we receive final state */
 	let waitingForResult = writable(false);
+	/** Timeout id for "play again" so we can clear it when state arrives or after 20s */
+	let playAgainTimeoutId: ReturnType<typeof setTimeout> | 0 = 0;
 
 	onMount(() => {
 		console.log('[b4n] join page onMount', { npub: !!npub, token: !!token, relaysCount: relays.length, relays });
@@ -82,9 +85,12 @@
 			);
 			const u = await subscribeGameEvents(gid, relays, {
 				onState: (s) => {
-					state.set(s);
-					// Clear waiting after any state so buttons reappear after a non-bust hit
+					gameState.set(s);
 					waitingForResult.set(false);
+					if (playAgainTimeoutId) {
+						clearTimeout(playAgainTimeoutId);
+						playAgainTimeoutId = 0;
+					}
 				}
 			});
 			unsub.set(u);
@@ -99,7 +105,7 @@
 
 	async function sendAction(action: 'hit' | 'stand') {
 		const gid = get(gameEventId);
-		const st = get(state);
+		const st = get(gameState);
 		if (!gid || !npub || st?.phase !== 'playing') return;
 		waitingForResult.set(true);
 		try {
@@ -121,11 +127,42 @@
 		}
 	}
 
-	function cardLabel(c: string): string {
-		const suit = c.slice(-1);
-		const map: Record<string, string> = { s: '♠', h: '♥', d: '♦', c: '♣' };
-		return c.slice(0, -1) + (map[suit] ?? suit);
+	let playAgainLoading = $state(false);
+
+	async function requestPlayAgain() {
+		const gid = get(gameEventId);
+		if (!gid || !npub) return;
+		playAgainLoading = true;
+		error.set(null);
+		try {
+			const dealerPubkey = PublicKey.parse(npub);
+			const playerSeed = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+				.map((b) => b.toString(16).padStart(2, '0'))
+				.join('');
+			await publishPlayAgain(
+				{
+					gameEventId: gid,
+					playerSeed,
+					createdAt: Math.floor(Date.now() / 1000)
+				},
+				relays,
+				gid,
+				dealerPubkey
+			);
+			waitingForResult.set(true);
+			if (playAgainTimeoutId) clearTimeout(playAgainTimeoutId);
+			playAgainTimeoutId = setTimeout(() => {
+				playAgainTimeoutId = 0;
+				waitingForResult.set(false);
+				error.set('New hand didn’t arrive (relay may be slow or rate-limited). Try Play again again.');
+			}, 20_000);
+		} catch (e) {
+			error.set(e instanceof Error ? e.message : String(e));
+		} finally {
+			playAgainLoading = false;
+		}
 	}
+
 </script>
 
 <svelte:head>
@@ -138,56 +175,70 @@
 	{#if $status === 'error'}
 		<p class="error">{$error}</p>
 		<a href="/">Back to dashboard</a>
-	{:else if $status === 'loading' && !$state}
+	{:else if $status === 'loading' && !$gameState}
 		<p class="muted">Loading game…</p>
 	{:else if $status === 'ready'}
 		<p class="muted">Game found. Join as player.</p>
 		<button onclick={joinGame} disabled={$status !== 'ready'}>Join game</button>
 		{#if $error}<p class="error">{$error}</p>{/if}
-	{:else if $status === 'joined' || $state}
-		<div class="game">
-			{#if $state}
+	{:else if $status === 'joined' || $gameState}
+		<div class="game table">
+			{#if $gameState}
 				<div class="hands">
 					<div class="hand dealer">
 						<span class="label">Dealer</span>
 						<div class="cards">
-							{#each $state.dealerHand as card, i}
-								<span class="card">
-									{$state.phase === 'playing' && i === 1 ? '?' : cardLabel(card)}
-								</span>
+							{#each $gameState.dealerHand as card, i}
+								<GameCard
+									card={card}
+									faceDown={$gameState.phase === 'playing' && i === 1}
+								/>
 							{/each}
 						</div>
-						{#if $state.phase !== 'playing' || $state.dealerHand.length > 2}
-							<span class="value">{handValue($state.dealerHand)}</span>
+						{#if $gameState.phase !== 'playing' || $gameState.dealerHand.length > 2}
+							<span class="value">{handValue($gameState.dealerHand)}</span>
 						{/if}
 					</div>
 					<div class="hand player">
 						<span class="label">Your hand</span>
 						<div class="cards">
-							{#each $state.playerHand as card}
-								<span class="card">{cardLabel(card)}</span>
+							{#each $gameState.playerHand as card}
+								<GameCard {card} />
 							{/each}
 						</div>
-						<span class="value">{handValue($state.playerHand)}</span>
+						<span class="value">{handValue($gameState.playerHand)}</span>
 					</div>
 				</div>
-				{#if $state.phase === 'playing'}
+				{#if $gameState.phase === 'playing'}
 					{#if $waitingForResult}
 						<p class="muted waiting">Waiting for result…</p>
 					{:else}
 						<div class="actions">
-							<button onclick={() => sendAction('hit')}>Hit</button>
-							<button onclick={() => sendAction('stand')}>Stand</button>
+							<button class="action hit" onclick={() => sendAction('hit')}>Hit</button>
+							<button class="action stand" onclick={() => sendAction('stand')}>Stand</button>
 						</div>
 					{/if}
-				{:else if $state.phase === 'finished'}
-					<p class="result" role="status">
-						{$state.winner === 'player' ? 'You win!' : $state.winner === 'dealer' ? 'Dealer wins.' : 'Push.'}
-					</p>
-					<p class="muted small">Dealer hand: {handValue($state.dealerHand)}</p>
-					{#if $state.dealerSeedReveal}
+				{:else if $gameState.phase === 'finished'}
+					<div class="result-banner" class:win={$gameState.winner === 'player'} class:push={$gameState.winner === 'push'} role="status">
+						{$gameState.winner === 'player' ? 'You win!' : $gameState.winner === 'dealer' ? 'Dealer wins.' : 'Push.'}
+					</div>
+					<p class="muted small">Dealer hand: {handValue($gameState.dealerHand)}</p>
+					{#if $gameState.dealerSeedReveal}
 						<p class="muted small">Dealer seed revealed — game was provably fair.</p>
 					{/if}
+					<div class="actions">
+						<button
+							class="action play-again"
+							onclick={requestPlayAgain}
+							disabled={playAgainLoading || $waitingForResult}
+						>
+							{#if playAgainLoading || $waitingForResult}
+								{#if $waitingForResult}Waiting for new hand…{:else}Requesting…{/if}
+							{:else}
+								Play again
+							{/if}
+						</button>
+					</div>
 				{/if}
 			{:else}
 				<p class="muted">Waiting for dealer to start…</p>
@@ -253,37 +304,99 @@
 		padding: 1.25rem;
 		margin: 1rem 0;
 	}
+	.game.table {
+		background: linear-gradient(160deg, #0d2818 0%, #134a2a 40%, #0f3320 100%);
+		border: 3px solid #1a4722;
+		box-shadow:
+			inset 0 0 80px rgba(0, 0, 0, 0.3),
+			0 8px 24px rgba(0, 0, 0, 0.4);
+	}
 	.hands .hand {
-		margin-bottom: 1rem;
+		margin-bottom: 1.25rem;
 	}
 	.label {
 		display: block;
 		font-size: 0.75rem;
-		color: #94a3b8;
-		margin-bottom: 0.25rem;
+		color: rgba(255, 255, 255, 0.7);
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		margin-bottom: 0.5rem;
 	}
 	.cards {
 		display: flex;
-		gap: 0.35rem;
+		gap: 0.5rem;
 		flex-wrap: wrap;
-	}
-	.cards .card {
-		background: #0f172a;
-		padding: 0.4rem 0.6rem;
-		border-radius: 4px;
-		font-size: 0.95rem;
+		align-items: center;
 	}
 	.value {
-		font-size: 0.85rem;
-		color: #cbd5e1;
-		margin-top: 0.25rem;
+		font-size: 0.9rem;
+		color: rgba(255, 255, 255, 0.9);
+		margin-top: 0.35rem;
+		font-weight: 600;
 	}
 	.actions {
-		margin-top: 1rem;
+		margin-top: 1.25rem;
+		display: flex;
+		gap: 0.75rem;
+		justify-content: center;
+		flex-wrap: wrap;
 	}
-	.result {
+	.action {
+		min-width: 5rem;
+		padding: 0.65rem 1.25rem;
+		font-size: 1rem;
 		font-weight: 600;
-		margin-top: 0.75rem;
+		border-radius: 8px;
+		border: none;
+		cursor: pointer;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	}
+	.action.hit {
+		background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+		color: #fff;
+	}
+	.action.hit:hover {
+		background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+	}
+	.action.stand {
+		background: linear-gradient(180deg, #15803d 0%, #166534 100%);
+		color: #fff;
+	}
+	.action.stand:hover {
+		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+	}
+	.action.play-again {
+		background: linear-gradient(180deg, #b45309 0%, #92400e 100%);
+		color: #fff;
+	}
+	.action.play-again:hover:not(:disabled) {
+		background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+	}
+	.action.play-again:disabled {
+		opacity: 0.8;
+		cursor: not-allowed;
+	}
+	.result-banner {
+		margin-top: 1rem;
+		padding: 0.75rem 1rem;
+		text-align: center;
+		font-weight: 700;
+		font-size: 1.1rem;
+		border-radius: 8px;
+		background: rgba(255, 255, 255, 0.1);
+		color: rgba(255, 255, 255, 0.9);
+	}
+	.result-banner.win {
+		background: linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 163, 74, 0.3) 100%);
+		color: #86efac;
+	}
+	.result-banner:not(.win):not(.push) {
+		background: rgba(248, 113, 113, 0.25);
+		color: #fca5a5;
+	}
+	.result-banner.push {
+		background: rgba(234, 179, 8, 0.25);
+		color: #fde047;
 	}
 	.waiting {
 		margin-top: 0.75rem;

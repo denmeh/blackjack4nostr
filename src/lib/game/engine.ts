@@ -15,9 +15,14 @@ export function buildInitialState(
 	deck: Deck,
 	gameEventId: string
 ): GameStatePayload {
+	if (!Array.isArray(deck) || deck.length < 4) {
+		throw new Error(`Deck too short for initial deal (got ${deck?.length ?? 0} cards, need 4)`);
+	}
 	const c = (i: number) => deck[i];
 	if (!c(0) || !c(1) || !c(2) || !c(3)) {
-		throw new Error('Deck too short for initial deal');
+		throw new Error(
+			`Deck too short for initial deal (length=${deck.length}, first cards: ${[c(0), c(1), c(2), c(3)].map((x) => String(x)).join(',')})`
+		);
 	}
 	const playerHand = [c(0)!, c(1)!];
 	const dealerHand = [c(2)!, c(3)!];
@@ -86,5 +91,13 @@ export function applyAction(
 
 /** Build deck from seeds (call after receiving player join). */
 export async function buildDeck(dealerSeed: string, playerSeed: string): Promise<Deck> {
-	return deckFromSeed(dealerSeed, playerSeed);
+	const d = String(dealerSeed ?? '').trim();
+	const p = String(playerSeed ?? '').trim();
+	if (!d) throw new Error('Dealer seed is required to build deck');
+	if (!p) throw new Error('Player seed is required to build deck (join payload may be invalid)');
+	const fullDeck = await deckFromSeed(d, p);
+	if (!Array.isArray(fullDeck) || fullDeck.length < 52) {
+		throw new Error(`Deck build failed: expected 52 cards, got ${fullDeck?.length ?? 0}`);
+	}
+	return fullDeck;
 }

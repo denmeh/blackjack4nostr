@@ -9,6 +9,7 @@ export const KIND_GAME_CREATE = 30400;
 export const KIND_GAME_JOIN = 30401;
 export const KIND_GAME_STATE = 30402;
 export const KIND_GAME_ACTION = 30403;
+export const KIND_GAME_PLAY_AGAIN = 30404;
 
 /** Single card: "2"-"10", "J", "Q", "K", "A" (value 2-10, face=10, ace=1 or 11) */
 export type Card = string;
@@ -46,6 +47,14 @@ export interface GameJoinPayload {
 export interface GameActionPayload {
 	gameEventId: string;
 	action: 'hit' | 'stand';
+	createdAt: number;
+}
+
+/** Payload of kind 30404: player requests another hand (new round, new seeds) */
+export interface GamePlayAgainPayload {
+	gameEventId: string;
+	/** New player seed for the next round; combined with dealer's new seed for provably fair deck */
+	playerSeed: string;
 	createdAt: number;
 }
 

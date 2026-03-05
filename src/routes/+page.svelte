@@ -92,7 +92,7 @@
 
 	<section class="card host">
 		<h2>Host a game</h2>
-		<p>Create a game and share the link. You’re the dealer.</p>
+		<p>Create a game and share the link. You’re the dealer. Games use relays that allow custom event kinds (30400–30403).</p>
 		<button onclick={hostGame} disabled={hostLoading}>
 			{#if hostLoading}
 				Creating…

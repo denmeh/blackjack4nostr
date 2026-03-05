@@ -11,10 +11,12 @@ import {
 	KIND_GAME_JOIN,
 	KIND_GAME_STATE,
 	KIND_GAME_ACTION,
+	KIND_GAME_PLAY_AGAIN,
 	type GameCreatePayload,
 	type GameJoinPayload,
 	type GameStatePayload,
-	type GameActionPayload
+	type GameActionPayload,
+	type GamePlayAgainPayload
 } from '$lib/protocol';
 
 const LOG = true;
@@ -28,11 +30,18 @@ function log(msg: string, ...args: unknown[]) {
 /** Tag name for game token (NIP-12 "t" style filter) */
 const TAG_TOKEN = 't';
 
+/** User-friendly message when relay blocks or rate-limits game kinds */
+const RELAY_BLOCK_HINT =
+	' Ask the host to create a new game and share a link that uses relays allowing game events (e.g. wss://nos.lol).';
+
 /** Normalize SDK/rust errors into a message we can show in UI */
 function normalizeRelayError(e: unknown): string {
 	const msg = e instanceof Error ? e.message : String(e);
 	if (msg.includes('null pointer') || msg.includes('passed to rust')) {
 		return 'Relay connection failed (network or relay issue). Try again or use another relay.';
+	}
+	if (msg.includes('not allowed') || msg.includes('rate-limited') || msg.includes('blocked')) {
+		return msg + RELAY_BLOCK_HINT;
 	}
 	return msg;
 }
@@ -210,6 +219,45 @@ export async function publishGameAction(
 	}
 }
 
+/**
+ * Publish play-again request (30404). Caller is player; dealer starts new round with new seeds.
+ */
+export async function publishPlayAgain(
+	payload: GamePlayAgainPayload,
+	relays: string[],
+	gameEventId: string,
+	dealerPubkey: import('@rust-nostr/nostr-sdk').PublicKey
+): Promise<void> {
+	log('publishPlayAgain: start', { gameEventId: gameEventId.slice(0, 16), relaysCount: relays?.length });
+	const sdk = await getNostrSdk();
+	const { EventBuilder, Kind, Tag, EventId } = sdk;
+	const keys = await import('$lib/session').then((m) => m.getStoredKeys());
+	if (!keys) throw new Error('Not logged in');
+
+	const urls = relays.filter((r): r is string => typeof r === 'string' && r.length > 0);
+	if (urls.length === 0) throw new Error('No relay URLs provided');
+
+	const content = JSON.stringify(payload);
+	const eId = EventId.parse(gameEventId);
+	const builder = new EventBuilder(new Kind(KIND_GAME_PLAY_AGAIN), content).tags([
+		Tag.event(eId),
+		Tag.publicKey(dealerPubkey)
+	]);
+
+	try {
+		const client = await getConnectedClient(urls);
+		const output = await client.sendEventBuilderTo(urls, builder);
+		if (!output.success || output.success.length === 0) {
+			const failedMsg = output.failed?.length ? output.failed.map((f: { url: string; error: string }) => f.error).join('; ') : 'unknown';
+			throw new Error(`Could not send to any relay. ${failedMsg}`);
+		}
+		log('publishPlayAgain: success');
+	} catch (e) {
+		log('publishPlayAgain: error', e);
+		throw new Error(normalizeRelayError(e));
+	}
+}
+
 /** Subscribe to the game create event (one 30400 from dealer with token). Relays required. */
 export async function subscribeGameCreate(
 	dealerNpub: string,
@@ -288,6 +336,7 @@ export type GameEventCallbacks = {
 	onJoin?: (payload: GameJoinPayload, fromPubkey: string) => void;
 	onState: (payload: GameStatePayload) => void;
 	onAction?: (payload: GameActionPayload, fromPubkey: string) => void;
+	onPlayAgain?: (payload: GamePlayAgainPayload, fromPubkey: string) => void;
 };
 
 /** Subscribe to game events. Dealer: pass onJoin + onAction. Player: pass onState only. Uses shared client. */
@@ -309,6 +358,7 @@ export async function subscribeGameEvents(
 	const subIdState = 'b4n-state-' + gameEventId.slice(0, 12);
 	const subIdJoin = 'b4n-join-' + gameEventId.slice(0, 12);
 	const subIdAction = 'b4n-action-' + gameEventId.slice(0, 12);
+	const subIdPlayAgain = 'b4n-playagain-' + gameEventId.slice(0, 12);
 	const subIds: string[] = [subIdState];
 
 	const filterState = new Filter().kind(new Kind(KIND_GAME_STATE)).event(eId);
@@ -324,12 +374,24 @@ export async function subscribeGameEvents(
 		const filterAction = new Filter().kind(new Kind(KIND_GAME_ACTION)).event(eId);
 		await client.subscribeWithIdTo(urls, subIdAction, filterAction, null);
 	}
+	if (callbacks.onPlayAgain) {
+		subIds.push(subIdPlayAgain);
+		const filterPlayAgain = new Filter().kind(new Kind(KIND_GAME_PLAY_AGAIN)).event(eId);
+		await client.subscribeWithIdTo(urls, subIdPlayAgain, filterPlayAgain, null);
+	}
 
 	const handle: import('@rust-nostr/nostr-sdk').HandleNotification = {
 		handleEvent: async (_relayUrl, subscriptionId, event) => {
 			try {
 				if (subscriptionId === subIdJoin && event.kind.asU16() === KIND_GAME_JOIN && callbacks.onJoin) {
-					const payload = JSON.parse(event.content) as GameJoinPayload;
+					const raw = JSON.parse(event.content) as Record<string, unknown>;
+					// Normalize: some relays/clients may send snake_case
+					const payload: GameJoinPayload = {
+						gameEventId: typeof raw?.gameEventId === 'string' ? raw.gameEventId : (raw?.game_event_id as string) ?? '',
+						dealerNpub: typeof raw?.dealerNpub === 'string' ? raw.dealerNpub : (raw?.dealer_npub as string) ?? '',
+						playerSeed: typeof raw?.playerSeed === 'string' ? raw.playerSeed : (raw?.player_seed as string) ?? '',
+						createdAt: typeof raw?.createdAt === 'number' ? raw.createdAt : (raw?.created_at as number) ?? 0
+					};
 					callbacks.onJoin(payload, event.author.toBech32());
 				} else if (subscriptionId === subIdState && event.kind.asU16() === KIND_GAME_STATE) {
 					const payload = JSON.parse(event.content) as GameStatePayload;
@@ -338,6 +400,14 @@ export async function subscribeGameEvents(
 				} else if (subscriptionId === subIdAction && event.kind.asU16() === KIND_GAME_ACTION && callbacks.onAction) {
 					const payload = JSON.parse(event.content) as GameActionPayload;
 					callbacks.onAction(payload, event.author.toBech32());
+				} else if (subscriptionId === subIdPlayAgain && event.kind.asU16() === KIND_GAME_PLAY_AGAIN && callbacks.onPlayAgain) {
+					const raw = JSON.parse(event.content) as Record<string, unknown>;
+					const payload: GamePlayAgainPayload = {
+						gameEventId: typeof raw?.gameEventId === 'string' ? raw.gameEventId : (raw?.game_event_id as string) ?? '',
+						playerSeed: typeof raw?.playerSeed === 'string' ? raw.playerSeed : (raw?.player_seed as string) ?? '',
+						createdAt: typeof raw?.createdAt === 'number' ? raw.createdAt : (raw?.created_at as number) ?? 0
+					};
+					callbacks.onPlayAgain(payload, event.author.toBech32());
 				}
 			} catch (e) {
 				log('subscribeGameEvents: handleEvent error', e);
