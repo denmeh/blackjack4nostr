@@ -4,7 +4,7 @@
  */
 
 import { deckFromSeed } from '$lib/protocol/deck';
-import { handValue, dealerMustHit, getWinner } from '$lib/protocol/game-logic';
+import { handValue, dealerMustHit, getWinner, isBlackjack } from '$lib/protocol/game-logic';
 import type { GameStatePayload, Card } from '$lib/protocol/types';
 
 /** Full deck for the game (52 cards in order) */
@@ -26,6 +26,20 @@ export function buildInitialState(
 	}
 	const playerHand = [c(0)!, c(1)!];
 	const dealerHand = [c(2)!, c(3)!];
+
+	// Dealer natural blackjack (A + 10/J/Q/K): hand ends immediately — dealer wins unless player also has blackjack (push)
+	if (isBlackjack(dealerHand)) {
+		return {
+			gameEventId,
+			phase: 'finished',
+			deckIndex: 4,
+			playerHand,
+			dealerHand,
+			winner: isBlackjack(playerHand) ? 'push' : 'dealer',
+			createdAt: Math.floor(Date.now() / 1000)
+		};
+	}
+
 	return {
 		gameEventId,
 		phase: 'playing',

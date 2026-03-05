@@ -13,6 +13,7 @@
 	import type { GameJoinPayload, GameActionPayload, GamePlayAgainPayload } from '$lib/protocol';
 	import type { Card } from '$lib/protocol';
 	import GameCard from '$lib/components/Card.svelte';
+	import { DEFAULT_RELAYS } from '$lib/protocol/link';
 
 	const gameId = $page.params.id as string;
 	const role = $page.url.searchParams.get('role'); // 'dealer'
@@ -35,7 +36,7 @@
 			return;
 		}
 		const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_relays_' + gameId) : null;
-		const relayList = stored ? (JSON.parse(stored) as string[]) : ['wss://relay.damus.io', 'wss://nos.lol'];
+		const relayList = stored ? (JSON.parse(stored) as string[]) : DEFAULT_RELAYS;
 		relays.set(relayList);
 		const seed = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_dealer_seed_' + gameId) : null;
 		dealerSeed.set(seed);

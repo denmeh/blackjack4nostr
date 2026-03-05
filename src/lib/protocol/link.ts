@@ -7,7 +7,7 @@ import type { GameLinkParams } from './types';
 import { PROTOCOL_SCHEME } from './types';
 
 // Default relays for hosting/joining. Must allow custom kinds 30400–30404 (some relays block them).
-export const DEFAULT_RELAYS = ['wss://nos.lol', 'wss://relay.damus.io'];
+export const DEFAULT_RELAYS = ['wss://relay.getportal.cc', 'wss://relay.damus.io'];
 
 /** Build deep link for sharing (relays as comma-separated in one param or multiple relay params) */
 export function buildGameLink(params: GameLinkParams): string {

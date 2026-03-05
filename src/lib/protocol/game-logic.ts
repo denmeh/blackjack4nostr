@@ -49,8 +49,16 @@ export function dealerMustHit(hand: Card[]): boolean {
 /**
  * Determine winner: player, dealer, or push.
  * Assumes both hands are final (no more hits).
+ * Natural blackjack (A + 10/J/Q/K in two cards): dealer wins unless player also has blackjack (push).
  */
 export function getWinner(playerHand: Card[], dealerHand: Card[]): 'player' | 'dealer' | 'push' {
+	const pBlackjack = isBlackjack(playerHand);
+	const dBlackjack = isBlackjack(dealerHand);
+
+	// Dealer natural blackjack wins unless player also has natural blackjack (push)
+	if (dBlackjack) return pBlackjack ? 'push' : 'dealer';
+	if (pBlackjack) return 'player';
+
 	const pv = handValue(playerHand);
 	const dv = handValue(dealerHand);
 	const pBust = pv > 21;
