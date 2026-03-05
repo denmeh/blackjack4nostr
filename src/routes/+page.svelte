@@ -86,13 +86,20 @@
 <style>
 	main {
 		max-width: 36rem;
-		margin: 2rem auto;
-		padding: 0 1rem;
+		margin: 0 auto;
+		padding: 1rem;
 		font-family: system-ui, sans-serif;
+		color: #f1f5f9;
 	}
 	h1 {
 		font-size: 1.5rem;
 		margin-bottom: 0.5rem;
+	}
+	a {
+		color: #93c5fd;
+	}
+	a:hover {
+		color: #bfdbfe;
 	}
 	button {
 		padding: 0.5rem 1rem;
@@ -104,18 +111,21 @@
 		opacity: 0.8;
 	}
 	.error {
-		color: #c00;
+		color: #f87171;
 		margin-top: 1rem;
 	}
 	.result {
 		margin-top: 1.5rem;
 		padding: 1rem;
-		background: #f5f5f5;
-		border-radius: 0.5rem;
+		background: #1e293b;
+		border: 1px solid #334155;
+		border-radius: 8px;
+		color: #e2e8f0;
 	}
 	.result dt {
 		font-weight: 600;
 		margin-top: 0.5rem;
+		color: #94a3b8;
 	}
 	.result dt:first-child {
 		margin-top: 0;
@@ -123,9 +133,14 @@
 	.result dd {
 		margin-left: 0;
 		margin-bottom: 0.25rem;
+		color: #f1f5f9;
 	}
 	.result code {
 		font-size: 0.85em;
 		word-break: break-all;
+		background: #334155;
+		color: #e2e8f0;
+		padding: 0.15em 0.4em;
+		border-radius: 4px;
 	}
 </style>
