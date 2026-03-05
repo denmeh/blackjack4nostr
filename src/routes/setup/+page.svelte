@@ -26,40 +26,39 @@
 		loading = true;
 		try {
 			const { Keys } = await getNostrSdk();
-			let nsec: string;
-			let npub: string;
+			let keys: InstanceType<typeof Keys>;
 
 			if (method === 'generate') {
-				const keys = Keys.generate();
-				nsec = keys.secretKey.toBech32();
-				npub = keys.publicKey.toBech32();
+				keys = Keys.generate();
 			} else if (method === 'nsec') {
 				const raw = nsecInput.trim();
 				if (!raw) {
 					error = 'Enter an nsec key';
 					return;
 				}
-				const keys = Keys.parse(raw);
-				nsec = keys.secretKey.toBech32();
-				npub = keys.publicKey.toBech32();
+				keys = Keys.parse(raw);
 			} else {
 				const raw = mnemonicInput.trim();
 				if (!raw) {
 					error = 'Enter your BIP39 mnemonic phrase';
 					return;
 				}
-				const keys = Keys.fromMnemonic(raw);
-				nsec = keys.secretKey.toBech32();
-				npub = keys.publicKey.toBech32();
+				keys = Keys.fromMnemonic(raw);
 			}
 
+			const nsec = keys.secretKey.toBech32();
+			const npub = keys.publicKey.toBech32();
 			saveIdentity(nsec, npub);
 			step = 2;
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
+			error = getErrorMessage(e);
 		} finally {
 			loading = false;
 		}
+	}
+
+	function getErrorMessage(e: unknown): string {
+		return e instanceof Error ? e.message : String(e);
 	}
 
 	function completeNwc() {
@@ -77,7 +76,7 @@
 			saveNwc(url);
 			goto('/');
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
+			error = getErrorMessage(e);
 		}
 	}
 </script>

@@ -3,10 +3,7 @@
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import {
-		subscribeGameEvents,
-		publishGameState
-	} from '$lib/game/events';
+	import { subscribeGameEvents, publishGameState } from '$lib/game/events';
 	import { buildDeck, buildInitialState, applyAction } from '$lib/game/engine';
 	import { handValue } from '$lib/protocol/game-logic';
 	import type { GameStatePayload } from '$lib/protocol/types';
@@ -14,10 +11,10 @@
 	import type { Card } from '$lib/protocol';
 	import GameCard from '$lib/components/Card.svelte';
 	import { DEFAULT_RELAYS, buildGameLink } from '$lib/protocol/link';
+	import { generateRandomHexSeed } from '$lib/random';
 
 	const gameId = $page.params.id as string;
-	const role = $page.url.searchParams.get('role'); // 'dealer'
-	const isDealer = role === 'dealer';
+	const isDealer = $page.url.searchParams.get('role') === 'dealer';
 
 	let status = writable<'loading' | 'waiting' | 'playing' | 'error'>('loading');
 	let error = writable<string | null>(null);
@@ -27,16 +24,36 @@
 	let dealerSeed = writable<string | null>(null);
 	let relays = writable<string[]>([]);
 	let unsub = writable<(() => void) | null>(null);
-	/** Prevents processing duplicate play_again events (e.g. from multiple relays) */
 	let processingPlayAgain = writable(false);
+
+	function getErrorMessage(e: unknown): string {
+		return e instanceof Error ? e.message : String(e);
+	}
+
+	function isValidPlayerSeed(seed: unknown): seed is string {
+		return typeof seed === 'string' && seed.length >= 32;
+	}
+
+	async function syncStateToRelay(
+		payload: GameStatePayload,
+		relayList: string[],
+		setError: (msg: string) => void,
+		prefix: string
+	): Promise<void> {
+		try {
+			await publishGameState(payload, relayList, gameId);
+		} catch (e) {
+			setError(prefix + getErrorMessage(e));
+		}
+	}
 
 	onMount(() => {
 		if (!isDealer) {
 			goto('/');
 			return;
 		}
-		const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_relays_' + gameId) : null;
-		const relayList = stored ? (JSON.parse(stored) as string[]) : DEFAULT_RELAYS;
+		const storedRelays = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_relays_' + gameId) : null;
+		const relayList = storedRelays ? (JSON.parse(storedRelays) as string[]) : DEFAULT_RELAYS;
 		relays.set(relayList);
 		const seed = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_dealer_seed_' + gameId) : null;
 		dealerSeed.set(seed);
@@ -46,11 +63,9 @@
 			return;
 		}
 		const npubStored = typeof localStorage !== 'undefined' ? localStorage.getItem('b4n_npub') : null;
-		if (npubStored && relayList.length) {
-			const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_token_' + gameId) : null;
-			if (token) {
-				shareUrl.set(buildGameLink({ npub: npubStored, token, relays: relayList }));
-			}
+		const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_token_' + gameId) : null;
+		if (npubStored && relayList.length && token) {
+			shareUrl.set(buildGameLink({ npub: npubStored, token, relays: relayList }));
 		}
 		startSubscriptions();
 		return () => {
@@ -63,35 +78,32 @@
 		try {
 			const relayList = get(relays);
 			const seed = get(dealerSeed) ?? '';
+			const setError = (msg: string) => error.set(msg);
+
 			unsub.set(
 				await subscribeGameEvents(gameId, relayList, {
-					onJoin: async (payload: GameJoinPayload, _fromPubkey: string) => {
-						if (get(state)) return; // already started
+					onJoin: async (payload: GameJoinPayload) => {
+						if (get(state)) return;
+						if (!isValidPlayerSeed(payload?.playerSeed)) {
+							status.set('error');
+							error.set('Invalid join: missing or invalid player seed. Ask the player to join again.');
+							return;
+						}
 						try {
-							if (!payload?.playerSeed || typeof payload.playerSeed !== 'string' || payload.playerSeed.length < 32) {
-								throw new Error('Invalid join: missing or invalid player seed. Ask the player to join again.');
-							}
 							const fullDeck = await buildDeck(seed, payload.playerSeed);
 							deck.set(fullDeck);
 							const initial = buildInitialState(fullDeck, gameId);
 							state.set(initial);
 							status.set('playing');
 							error.set(null);
-							try {
-								await publishGameState(initial, relayList, gameId);
-							} catch (relayErr) {
-								error.set(
-									'Game started but could not sync to relay. Player may not see the table. ' +
-										(relayErr instanceof Error ? relayErr.message : String(relayErr))
-								);
-							}
+							await syncStateToRelay(initial, relayList, setError, 'Game started but could not sync to relay. Player may not see the table. ');
 						} catch (e) {
 							status.set('error');
-							error.set(e instanceof Error ? e.message : String(e));
+							error.set(getErrorMessage(e));
 						}
 					},
 					onState: () => {},
-					onAction: async (payload: GameActionPayload, _fromPubkey: string) => {
+					onAction: async (payload: GameActionPayload) => {
 						const st = get(state);
 						const d = get(deck);
 						const currentSeed = get(dealerSeed) ?? '';
@@ -99,27 +111,16 @@
 						const next = applyAction(st, payload.action, d, currentSeed);
 						state.set(next);
 						error.set(null);
-						try {
-							await publishGameState(next, relayList, gameId);
-						} catch (relayErr) {
-							error.set(
-								'Result not synced to relay. ' +
-									(relayErr instanceof Error ? relayErr.message : String(relayErr))
-							);
-						}
+						await syncStateToRelay(next, relayList, setError, 'Result not synced to relay. ');
 					},
-					onPlayAgain: async (payload: GamePlayAgainPayload, _fromPubkey: string) => {
+					onPlayAgain: async (payload: GamePlayAgainPayload) => {
 						if (get(processingPlayAgain)) return;
-						const st = get(state);
-						if (st?.phase !== 'finished') return;
-						if (!payload?.playerSeed || typeof payload.playerSeed !== 'string' || payload.playerSeed.length < 32) {
-							return;
-						}
+						if (get(state)?.phase !== 'finished') return;
+						if (!isValidPlayerSeed(payload?.playerSeed)) return;
+
 						processingPlayAgain.set(true);
 						try {
-							const newDealerSeed = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-								.map((b) => b.toString(16).padStart(2, '0'))
-								.join('');
+							const newDealerSeed = generateRandomHexSeed();
 							if (typeof sessionStorage !== 'undefined') {
 								sessionStorage.setItem('b4n_dealer_seed_' + gameId, newDealerSeed);
 							}
@@ -129,16 +130,9 @@
 							const initial = buildInitialState(fullDeck, gameId);
 							state.set(initial);
 							error.set(null);
-							try {
-								await publishGameState(initial, relayList, gameId);
-							} catch (relayErr) {
-								error.set(
-									'New hand started but could not sync to relay. ' +
-										(relayErr instanceof Error ? relayErr.message : String(relayErr))
-								);
-							}
+							await syncStateToRelay(initial, relayList, setError, 'New hand started but could not sync to relay. ');
 						} catch (e) {
-							error.set(e instanceof Error ? e.message : String(e));
+							error.set(getErrorMessage(e));
 						} finally {
 							processingPlayAgain.set(false);
 						}
@@ -148,15 +142,13 @@
 			status.set('waiting');
 		} catch (e) {
 			status.set('error');
-			error.set(e instanceof Error ? e.message : String(e));
+			error.set(getErrorMessage(e));
 		}
 	}
 
 	function copyLink() {
 		const url = get(shareUrl);
-		if (url && typeof navigator !== 'undefined') {
-			navigator.clipboard.writeText(url);
-		}
+		if (url && typeof navigator !== 'undefined') navigator.clipboard.writeText(url);
 	}
 </script>
 

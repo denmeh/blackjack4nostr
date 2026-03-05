@@ -24,27 +24,22 @@ export function buildGameLink(params: GameLinkParams): string {
  * - https://domain/join?npub=...&relays=...&token=...
  */
 export function parseGameLink(link: string): GameLinkParams | null {
-	link = link.trim();
+	const trimmed = link.trim();
+	if (!trimmed.startsWith(PROTOCOL_SCHEME + '://') && !trimmed.startsWith('http')) {
+		return null;
+	}
 	let url: URL;
 	try {
-		if (link.startsWith(PROTOCOL_SCHEME + '://')) {
-			// blackjack4nostr://npub1xxx?relays=...&token=...
-			url = new URL(link.replace(PROTOCOL_SCHEME + '://', 'https://'));
-		} else if (link.startsWith('http')) {
-			url = new URL(link);
-		} else {
-			return null;
-		}
+		url = trimmed.startsWith(PROTOCOL_SCHEME + '://')
+			? new URL(trimmed.replace(PROTOCOL_SCHEME + '://', 'https://'))
+			: new URL(trimmed);
 	} catch {
 		return null;
 	}
 
-	const npub = link.startsWith(PROTOCOL_SCHEME)
-		? url.host
-		: url.searchParams.get('npub');
+	const npub = trimmed.startsWith(PROTOCOL_SCHEME + '://') ? url.host : url.searchParams.get('npub');
 	const token = url.searchParams.get('token');
 	const relaysParam = url.searchParams.get('relays');
-
 	if (!npub || !token) return null;
 
 	const relays = relaysParam ? relaysParam.split(',').map((r) => r.trim()).filter(Boolean) : [];

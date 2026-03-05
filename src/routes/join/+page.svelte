@@ -3,12 +3,12 @@
 	import { onMount } from 'svelte';
 	import { writable, get } from 'svelte/store';
 	import { goto } from '$app/navigation';
-	import { getNostrSdk } from '$lib/nostr';
 	import { fetchGameCreate, publishGameJoin, subscribeGameEvents, publishGameAction, publishPlayAgain } from '$lib/game/events';
 	import { PublicKey } from '@rust-nostr/nostr-sdk';
 	import { handValue } from '$lib/protocol/game-logic';
 	import type { GameStatePayload } from '$lib/protocol/types';
 	import GameCard from '$lib/components/Card.svelte';
+	import { generateRandomHexSeed } from '$lib/random';
 
 	const npub = $page.url.searchParams.get('npub');
 	const token = $page.url.searchParams.get('token');
@@ -20,13 +20,14 @@
 	let gameEventId = writable<string | null>(null);
 	let gameState = writable<GameStatePayload | null>(null);
 	let unsub = writable<(() => void) | null>(null);
-	/** True after player sent hit/stand, until we receive final state */
 	let waitingForResult = writable(false);
-	/** Timeout id for "play again" so we can clear it when state arrives or after 20s */
 	let playAgainTimeoutId: ReturnType<typeof setTimeout> | 0 = 0;
 
+	function getErrorMessage(e: unknown): string {
+		return e instanceof Error ? e.message : String(e);
+	}
+
 	onMount(() => {
-		console.log('[b4n] join page onMount', { npub: !!npub, token: !!token, relaysCount: relays.length, relays });
 		if (!npub || !token || relays.length === 0) {
 			status.set('error');
 			error.set('Missing npub, token, or relays. Use the link from the game host.');
@@ -40,12 +41,10 @@
 	});
 
 	async function loadGame() {
-		console.log('[b4n] join loadGame: start');
 		status.set('loading');
 		error.set(null);
 		try {
 			const result = await fetchGameCreate(npub!, token!, relays, 8000);
-			console.log('[b4n] join loadGame: fetchGameCreate result', result ? 'ok' : 'null');
 			if (!result) {
 				status.set('error');
 				error.set('Game not found. Check the link and relays.');
@@ -54,24 +53,19 @@
 			gameEventId.set(result.eventId);
 			status.set('ready');
 		} catch (e) {
-			console.log('[b4n] join loadGame: error', e);
 			status.set('error');
-			error.set(e instanceof Error ? e.message : String(e));
+			error.set(getErrorMessage(e));
 		}
 	}
 
 	async function joinGame() {
 		const gid = get(gameEventId);
-		console.log('[b4n] join joinGame: start', { gameEventId: gid, npub: !!npub });
 		if (!gid || !npub) return;
 		status.set('loading');
 		error.set(null);
 		try {
-			const sdk = await getNostrSdk();
 			const dealerPubkey = PublicKey.parse(npub);
-			const playerSeed = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-				.map((b) => b.toString(16).padStart(2, '0'))
-				.join('');
+			const playerSeed = generateRandomHexSeed();
 			await publishGameJoin(
 				{
 					gameEventId: gid,
@@ -95,11 +89,9 @@
 			});
 			unsub.set(u);
 			status.set('joined');
-			console.log('[b4n] join joinGame: success');
 		} catch (e) {
-			console.log('[b4n] join joinGame: error', e);
 			status.set('ready');
-			error.set(e instanceof Error ? e.message : String(e));
+			error.set(getErrorMessage(e));
 		}
 	}
 
@@ -109,7 +101,6 @@
 		if (!gid || !npub || st?.phase !== 'playing') return;
 		waitingForResult.set(true);
 		try {
-			const sdk = await getNostrSdk();
 			const dealerPubkey = PublicKey.parse(npub);
 			await publishGameAction(
 				{
@@ -123,7 +114,7 @@
 			);
 		} catch (e) {
 			waitingForResult.set(false);
-			error.set(e instanceof Error ? e.message : String(e));
+			error.set(getErrorMessage(e));
 		}
 	}
 
@@ -136,9 +127,7 @@
 		error.set(null);
 		try {
 			const dealerPubkey = PublicKey.parse(npub);
-			const playerSeed = Array.from(crypto.getRandomValues(new Uint8Array(32)))
-				.map((b) => b.toString(16).padStart(2, '0'))
-				.join('');
+			const playerSeed = generateRandomHexSeed();
 			await publishPlayAgain(
 				{
 					gameEventId: gid,
@@ -157,12 +146,11 @@
 				error.set('New hand didn’t arrive (relay may be slow or rate-limited). Try Play again again.');
 			}, 20_000);
 		} catch (e) {
-			error.set(e instanceof Error ? e.message : String(e));
+			error.set(getErrorMessage(e));
 		} finally {
 			playAgainLoading = false;
 		}
 	}
-
 </script>
 
 <svelte:head>

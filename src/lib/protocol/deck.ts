@@ -21,11 +21,6 @@ export async function sha256Hex(input: string): Promise<string> {
 		.join('');
 }
 
-/** Synchronous SHA-256 using Web Crypto (same as above, for use in workers or where await is ok). */
-export function sha256HexSyncNotAvailable(): never {
-	throw new Error('Use async sha256Hex() for SHA-256');
-}
-
 /** Get 32 bytes from SHA256(seed + counter) for deterministic RNG */
 async function hashStep(seedHex: string, counter: number): Promise<Uint8Array> {
 	const msg = seedHex + '.' + counter;
