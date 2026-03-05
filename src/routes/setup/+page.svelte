@@ -231,6 +231,7 @@
 	}
 	.tab {
 		padding: 0.5rem 0.75rem;
+		min-height: var(--b4n-touch-min, 44px);
 		font-size: 0.9rem;
 		border: 1px solid var(--b4n-border);
 		background: var(--b4n-surface-elevated);
@@ -238,6 +239,10 @@
 		border-radius: 8px;
 		cursor: pointer;
 		font-weight: 500;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
 	}
 	.tab:hover {
 		background: var(--b4n-gold-muted);
@@ -272,7 +277,18 @@
 		color: var(--b4n-text-muted);
 		margin-bottom: 0.4rem;
 	}
-	input,
+	input {
+		width: 100%;
+		padding: 0.6rem 0.75rem;
+		min-height: var(--b4n-touch-min, 44px);
+		font-size: 1rem;
+		border: 1px solid var(--b4n-input-border);
+		border-radius: 8px;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-text);
+		margin-bottom: 1rem;
+		box-sizing: border-box;
+	}
 	textarea {
 		width: 100%;
 		padding: 0.6rem 0.75rem;
@@ -283,6 +299,8 @@
 		color: var(--b4n-text);
 		margin-bottom: 1rem;
 		box-sizing: border-box;
+		resize: vertical;
+		min-height: 4rem;
 	}
 	input:focus,
 	textarea:focus {
@@ -294,10 +312,6 @@
 	textarea::placeholder {
 		color: var(--b4n-text-muted);
 	}
-	textarea {
-		resize: vertical;
-		min-height: 4rem;
-	}
 	.error {
 		color: var(--b4n-lose);
 		font-size: 0.9rem;
@@ -305,11 +319,16 @@
 	}
 	.btn {
 		padding: 0.65rem 1rem;
+		min-height: var(--b4n-touch-min, 44px);
 		font-size: 0.95rem;
 		border-radius: 8px;
 		cursor: pointer;
 		font-weight: 600;
 		border: none;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
 	}
 	.btn-primary {
 		width: 100%;
@@ -342,5 +361,26 @@
 	}
 	.row .btn-primary {
 		flex: 1;
+	}
+	@media (max-width: 480px) {
+		.wizard {
+			padding: 1rem;
+		}
+		.wizard-header h1 {
+			font-size: 1.35rem;
+		}
+		.card {
+			padding: 1.25rem;
+		}
+		.tabs {
+			flex-wrap: wrap;
+		}
+		.tab {
+			flex: 1;
+			min-width: 0;
+		}
+		.row {
+			flex-direction: column;
+		}
 	}
 </style>

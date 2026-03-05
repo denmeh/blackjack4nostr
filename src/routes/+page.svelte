@@ -192,12 +192,16 @@
 	}
 	.btn {
 		padding: 0.65rem 1.25rem;
+		min-height: var(--b4n-touch-min, 44px);
 		font-size: 0.95rem;
 		font-weight: 600;
 		cursor: pointer;
 		border: none;
 		border-radius: 8px;
 		transition: background 0.15s, transform 0.1s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 	.btn:active:not(:disabled) {
 		transform: scale(0.98);
@@ -232,10 +236,14 @@
 	.join-row {
 		display: flex;
 		gap: 0.6rem;
+		flex-wrap: wrap;
 	}
 	.join-row input {
 		flex: 1;
+		min-width: 0;
 		padding: 0.6rem 0.85rem;
+		min-height: var(--b4n-touch-min, 44px);
+		box-sizing: border-box;
 		font-size: 0.9rem;
 		font-family: var(--font-mono);
 		background: var(--b4n-input-bg);
@@ -250,5 +258,19 @@
 		outline: none;
 		border-color: var(--b4n-gold-muted);
 		box-shadow: 0 0 0 2px rgba(212, 168, 83, 0.15);
+	}
+	@media (max-width: 380px) {
+		.dashboard {
+			padding: 1.25rem 1rem;
+		}
+		.hero h1 {
+			font-size: 1.5rem;
+		}
+		.join-row {
+			flex-direction: column;
+		}
+		.join-row .btn-primary {
+			width: 100%;
+		}
 	}
 </style>

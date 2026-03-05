@@ -272,6 +272,7 @@
 	}
 	button {
 		padding: 0.5rem 1rem;
+		min-height: var(--b4n-touch-min, 44px);
 		font-size: 0.95rem;
 		cursor: pointer;
 		background: var(--b4n-surface-elevated);
@@ -280,6 +281,10 @@
 		color: var(--b4n-text);
 		margin-right: 0.5rem;
 		font-weight: 500;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
 	}
 	button:hover:not(:disabled) {
 		background: var(--b4n-gold-muted);
@@ -345,6 +350,7 @@
 	}
 	.action {
 		min-width: 5rem;
+		min-height: var(--b4n-touch-min, 44px);
 		padding: 0.65rem 1.25rem;
 		font-size: 1rem;
 		font-weight: 600;
@@ -353,6 +359,10 @@
 		cursor: pointer;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 		transition: transform 0.1s, box-shadow 0.15s;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
 	}
 	.action:active:not(:disabled) {
 		transform: scale(0.98);
@@ -411,5 +421,23 @@
 		margin-top: 0.75rem;
 		font-style: italic;
 		color: var(--b4n-text-muted);
+	}
+	@media (max-width: 480px) {
+		.join-page {
+			padding: 1rem;
+		}
+		h1 {
+			font-size: 1.15rem;
+		}
+		.actions {
+			gap: 0.5rem;
+		}
+		.action {
+			flex: 1;
+			min-width: 0;
+		}
+		button {
+			margin-right: 0.25rem;
+		}
 	}
 </style>

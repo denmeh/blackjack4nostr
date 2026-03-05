@@ -95,6 +95,9 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0.6rem 1.25rem;
+		padding-top: max(0.6rem, env(safe-area-inset-top));
+		padding-left: max(1.25rem, env(safe-area-inset-left));
+		padding-right: max(1.25rem, env(safe-area-inset-right));
 		background: var(--b4n-surface);
 		border-bottom: 1px solid var(--b4n-border);
 		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
@@ -160,6 +163,10 @@
 		border-radius: 6px;
 		cursor: pointer;
 		font-weight: 500;
+		min-height: var(--b4n-touch-min, 44px);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
 	}
 	.logout:hover {
 		background: var(--b4n-surface-elevated);
@@ -170,5 +177,26 @@
 		padding: 3rem;
 		text-align: center;
 		color: var(--b4n-text-muted);
+	}
+	@media (max-width: 480px) {
+		.header {
+			flex-wrap: wrap;
+			gap: 0.75rem;
+			padding: 0.6rem 0.75rem;
+		}
+		.brand {
+			font-size: 1rem;
+		}
+		.user {
+			width: 100%;
+			justify-content: flex-end;
+			gap: 0.5rem;
+		}
+		.user .label {
+			display: none;
+		}
+		.npub {
+			max-width: 8ch;
+		}
 	}
 </style>
