@@ -1,146 +1,193 @@
 <script lang="ts">
-	import { getNostrSdk, isNostrReady } from '$lib/nostr';
+	import { goto } from '$app/navigation';
+	import { npub } from '$lib/session';
+	import { buildJoinWebUrl, DEFAULT_RELAYS, parseGameLink } from '$lib/protocol';
+	import { sha256Hex } from '$lib/protocol/deck';
+	import { publishGameCreate } from '$lib/game/events';
 
-	let status = $state('');
-	let result = $state<{
-		eventId?: string;
-		success?: string[];
-		failed?: Array<{ url: string; error: string }>;
-	} | null>(null);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
+	let hostLoading = $state(false);
+	let hostError = $state<string | null>(null);
+	let gameLink = $state<string | null>(null);
+	let gameEventId = $state<string | null>(null);
+	let joinLinkInput = $state('');
 
-	async function runNostrTest() {
-		loading = true;
-		error = null;
-		result = null;
-		status = 'Generating keys...';
-
+	async function hostGame() {
+		console.log('[b4n] hostGame: start');
+		hostLoading = true;
+		hostError = null;
+		gameLink = null;
+		gameEventId = null;
 		try {
-			const { Keys, Client, EventBuilder, NostrSigner } = await getNostrSdk();
+			const myNpub = $npub;
+			console.log('[b4n] hostGame: npub', myNpub ? 'ok' : 'missing');
+			if (!myNpub) throw new Error('Not logged in');
 
-			const keys = Keys.generate();
-			const signer = NostrSigner.keys(keys);
-			const client = new Client(signer);
+			const token = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+				.map((b) => b.toString(16).padStart(2, '0'))
+				.join('');
+			const dealerSeed = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+				.map((b) => b.toString(16).padStart(2, '0'))
+				.join('');
+			const dealerSeedHash = await sha256Hex(dealerSeed);
+			console.log('[b4n] hostGame: token and seed ready, DEFAULT_RELAYS', DEFAULT_RELAYS);
 
-			status = 'Connecting to relay...';
-			await client.addRelay('wss://relay.damus.io');
-			await client.connect();
-
-			status = 'Publishing test note...';
-			const builder = EventBuilder.textNote('Hello, rust-nostr! (from blackjack4nostr)');
-			const output = await client.sendEventBuilder(builder);
-
-			result = {
-				eventId: output.id.toBech32(),
-				success: [...(output.success || [])],
-				failed: (output.failed || []).map((f: { url: string; error: string }) => ({
-					url: f.url,
-					error: f.error
-				}))
+			const payload = {
+				token,
+				relays: DEFAULT_RELAYS,
+				dealerSeedHash,
+				createdAt: Math.floor(Date.now() / 1000)
 			};
-			status = 'Done.';
+
+			const createPromise = publishGameCreate(payload, DEFAULT_RELAYS);
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				setTimeout(() => reject(new Error('Connection timed out. Relays may be unreachable. Try again.')), 20_000);
+			});
+			const { eventId } = await Promise.race([createPromise, timeoutPromise]);
+			console.log('[b4n] hostGame: game created', eventId);
+			gameEventId = eventId;
+			const params = { npub: myNpub, relays: DEFAULT_RELAYS, token };
+			gameLink = buildJoinWebUrl(params);
+			if (typeof sessionStorage !== 'undefined') {
+				sessionStorage.setItem('b4n_dealer_seed_' + eventId, dealerSeed);
+				sessionStorage.setItem('b4n_token_' + eventId, token);
+				sessionStorage.setItem('b4n_relays_' + eventId, JSON.stringify(DEFAULT_RELAYS));
+			}
+			goto('/game/' + encodeURIComponent(eventId) + '?role=dealer');
 		} catch (e) {
-			error = e instanceof Error ? e.message : String(e);
-			status = 'Error.';
+			console.log('[b4n] hostGame: error', e);
+			hostError = e instanceof Error ? e.message : String(e);
 		} finally {
-			loading = false;
+			hostLoading = false;
+			console.log('[b4n] hostGame: done');
+		}
+	}
+
+	function joinViaLink() {
+		const link = joinLinkInput.trim();
+		if (!link) return;
+		const params = parseGameLink(link);
+		if (params) {
+			goto(
+				'/join?npub=' +
+					encodeURIComponent(params.npub) +
+					'&token=' +
+					encodeURIComponent(params.token) +
+					'&relays=' +
+					encodeURIComponent(params.relays.join(','))
+			);
+		} else if (link.includes('/join?')) {
+			try {
+				const u = new URL(link.startsWith('http') ? link : window.location.origin + link);
+				goto(u.pathname + u.search);
+			} catch {
+				// ignore
+			}
 		}
 	}
 </script>
 
-<main>
+<main class="dashboard">
 	<h1>Blackjack4Nostr</h1>
-	<p>Test the <a href="https://rust-nostr.org/sdk/install.html" target="_blank" rel="noopener">@rust-nostr/nostr-sdk</a> (TypeScript/JavaScript).</p>
+	<p class="subtitle">Provably fair blackjack over Nostr. Host a game or join with a link.</p>
 
-	<button onclick={runNostrTest} disabled={loading || !$isNostrReady}>
-		{#if !$isNostrReady}
-			Loading Nostr…
-		{:else if loading}
-			{status}
-		{:else}
-			Run Nostr test
+	<section class="card host">
+		<h2>Host a game</h2>
+		<p>Create a game and share the link. You’re the dealer.</p>
+		<button onclick={hostGame} disabled={hostLoading}>
+			{#if hostLoading}
+				Creating…
+			{:else}
+				Host game
+			{/if}
+		</button>
+		{#if hostError}
+			<p class="error">{hostError}</p>
 		{/if}
-	</button>
+	</section>
 
-	{#if error}
-		<p class="error"><strong>Error:</strong> {error}</p>
-	{/if}
-
-	{#if result}
-		<dl class="result">
-			<dt>Event ID (note1…)</dt>
-			<dd><code>{result.eventId}</code></dd>
-			<dt>Sent to</dt>
-			<dd>{result.success?.length ? result.success.join(', ') : '—'}</dd>
-			<dt>Not sent to</dt>
-			<dd>
-				{result.failed?.length
-					? result.failed.map((f) => `${f.url}: ${f.error}`).join('; ')
-					: '—'}
-			</dd>
-		</dl>
-	{/if}
+	<section class="card join">
+		<h2>Join a game</h2>
+		<p>Paste a game link (e.g. blackjack4nostr://… or the web join URL).</p>
+		<div class="join-row">
+			<input
+				type="text"
+				placeholder="blackjack4nostr://npub1…?relays=…&token=…"
+				bind:value={joinLinkInput}
+				onkeydown={(e) => e.key === 'Enter' && joinViaLink()}
+			/>
+			<button onclick={joinViaLink} disabled={!joinLinkInput.trim()}>Join</button>
+		</div>
+	</section>
 </main>
 
 <style>
-	main {
-		max-width: 36rem;
+	.dashboard {
+		max-width: 28rem;
 		margin: 0 auto;
-		padding: 1rem;
+		padding: 1.5rem;
 		font-family: system-ui, sans-serif;
 		color: #f1f5f9;
 	}
 	h1 {
 		font-size: 1.5rem;
-		margin-bottom: 0.5rem;
+		margin-bottom: 0.25rem;
 	}
-	a {
-		color: #93c5fd;
+	.subtitle {
+		color: #94a3b8;
+		font-size: 0.9rem;
+		margin-bottom: 1.5rem;
 	}
-	a:hover {
-		color: #bfdbfe;
+	.card {
+		background: #1e293b;
+		border: 1px solid #334155;
+		border-radius: 10px;
+		padding: 1.25rem;
+		margin-bottom: 1rem;
+	}
+	.card h2 {
+		font-size: 1.1rem;
+		margin-bottom: 0.35rem;
+	}
+	.card p {
+		color: #94a3b8;
+		font-size: 0.85rem;
+		margin-bottom: 0.75rem;
 	}
 	button {
 		padding: 0.5rem 1rem;
-		font-size: 1rem;
+		font-size: 0.95rem;
 		cursor: pointer;
+		background: #475569;
+		border: none;
+		border-radius: 6px;
+		color: #fff;
+	}
+	button:hover:not(:disabled) {
+		background: #64748b;
 	}
 	button:disabled {
+		opacity: 0.7;
 		cursor: not-allowed;
-		opacity: 0.8;
 	}
 	.error {
 		color: #f87171;
-		margin-top: 1rem;
-	}
-	.result {
-		margin-top: 1.5rem;
-		padding: 1rem;
-		background: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 8px;
-		color: #e2e8f0;
-	}
-	.result dt {
-		font-weight: 600;
+		font-size: 0.85rem;
 		margin-top: 0.5rem;
-		color: #94a3b8;
 	}
-	.result dt:first-child {
-		margin-top: 0;
+	.join-row {
+		display: flex;
+		gap: 0.5rem;
 	}
-	.result dd {
-		margin-left: 0;
-		margin-bottom: 0.25rem;
+	.join-row input {
+		flex: 1;
+		padding: 0.5rem 0.75rem;
+		font-size: 0.9rem;
+		background: #0f172a;
+		border: 1px solid #334155;
+		border-radius: 6px;
 		color: #f1f5f9;
 	}
-	.result code {
-		font-size: 0.85em;
-		word-break: break-all;
-		background: #334155;
-		color: #e2e8f0;
-		padding: 0.15em 0.4em;
-		border-radius: 4px;
+	.join-row input::placeholder {
+		color: #64748b;
 	}
 </style>

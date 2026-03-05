@@ -77,6 +77,8 @@ export function clearSession(): void {
 		localStorage.removeItem(STORAGE_NPUB);
 		localStorage.removeItem(STORAGE_NWC);
 	}
+	// Release shared relay client so next login connects fresh
+	import('$lib/game/relay-client').then((m) => m.clearConnectedClient()).catch(() => {});
 	isLoggedIn.set(false);
 	npub.set(null);
 	nwcBalance.set(null);
