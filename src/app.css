@@ -1,0 +1,54 @@
+/* Blackjack4Nostr — casino / Nostr vibe */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;500;600;700&display=swap');
+
+:root {
+	/* Casino felt & table */
+	--b4n-bg: #0a0f0d;
+	--b4n-surface: #121a16;
+	--b4n-surface-elevated: #1a2520;
+	--b4n-felt: #0d2818;
+	--b4n-felt-light: #134a2a;
+	--b4n-felt-border: #1a4722;
+	/* Gold / brass accents */
+	--b4n-gold: #d4a853;
+	--b4n-gold-dim: #b8923f;
+	--b4n-gold-bright: #e8c872;
+	--b4n-gold-muted: rgba(212, 168, 83, 0.5);
+	/* Text */
+	--b4n-text: #e8ebe9;
+	--b4n-text-muted: #8a9a92;
+	--b4n-text-bright: #fff;
+	/* Actions */
+	--b4n-hit: #c73e3e;
+	--b4n-hit-hover: #e04a4a;
+	--b4n-stand: #2d7d4a;
+	--b4n-stand-hover: #38a05a;
+	--b4n-win: #3d9b5c;
+	--b4n-lose: #c73e3e;
+	--b4n-push: #c9a227;
+	/* Inputs & borders */
+	--b4n-border: #2a3530;
+	--b4n-input-bg: #0f1613;
+	--b4n-input-border: #253029;
+	/* Fonts */
+	--font-display: 'Outfit', system-ui, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+html, body {
+	margin: 0;
+	padding: 0;
+	min-height: 100vh;
+	background: var(--b4n-bg);
+	font-family: var(--font-display);
+	color: var(--b4n-text);
+	-webkit-font-smoothing: antialiased;
+}
+
+a {
+	color: var(--b4n-gold-dim);
+	text-decoration: none;
+}
+a:hover {
+	color: var(--b4n-gold-bright);
+}

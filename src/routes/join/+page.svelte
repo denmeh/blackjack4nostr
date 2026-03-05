@@ -170,7 +170,7 @@
 </svelte:head>
 
 <main class="join-page">
-	<h1>Join game</h1>
+	<h1><span class="page-icon">♥</span> Join game</h1>
 
 	{#if $status === 'error'}
 		<p class="error">{$error}</p>
@@ -252,18 +252,25 @@
 
 <style>
 	.join-page {
-		max-width: 24rem;
+		max-width: 28rem;
 		margin: 0 auto;
 		padding: 1.5rem;
-		font-family: system-ui, sans-serif;
-		color: #f1f5f9;
+		color: var(--b4n-text);
 	}
 	h1 {
-		font-size: 1.25rem;
+		font-size: 1.3rem;
+		font-weight: 600;
 		margin-bottom: 1rem;
+		color: var(--b4n-text-bright);
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+	.page-icon {
+		color: var(--b4n-gold);
 	}
 	.muted {
-		color: #94a3b8;
+		color: var(--b4n-text-muted);
 		font-size: 0.9rem;
 	}
 	.small {
@@ -271,7 +278,7 @@
 		margin-top: 0.5rem;
 	}
 	.error {
-		color: #f87171;
+		color: var(--b4n-lose);
 		font-size: 0.9rem;
 		margin: 0.5rem 0;
 	}
@@ -279,34 +286,41 @@
 		padding: 0.5rem 1rem;
 		font-size: 0.95rem;
 		cursor: pointer;
-		background: #475569;
-		border: none;
-		border-radius: 6px;
-		color: #fff;
+		background: var(--b4n-surface-elevated);
+		border: 1px solid var(--b4n-border);
+		border-radius: 8px;
+		color: var(--b4n-text);
 		margin-right: 0.5rem;
+		font-weight: 500;
 	}
 	button:hover:not(:disabled) {
-		background: #64748b;
+		background: var(--b4n-gold-muted);
+		border-color: var(--b4n-gold-dim);
+		color: var(--b4n-text-bright);
 	}
 	button:disabled {
-		opacity: 0.7;
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 	.back {
 		display: inline-block;
 		margin-top: 1rem;
-		color: #94a3b8;
+		color: var(--b4n-text-muted);
 		font-size: 0.9rem;
 	}
+	.back:hover {
+		color: var(--b4n-gold-dim);
+	}
 	.game {
-		background: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 10px;
+		background: var(--b4n-surface);
+		border: 1px solid var(--b4n-border);
+		border-radius: 12px;
 		padding: 1.25rem;
 		margin: 1rem 0;
 	}
 	.game.table {
-		background: linear-gradient(160deg, #0d2818 0%, #134a2a 40%, #0f3320 100%);
-		border: 3px solid #1a4722;
+		background: linear-gradient(160deg, var(--b4n-felt) 0%, var(--b4n-felt-light) 40%, #0f3320 100%);
+		border: 3px solid var(--b4n-felt-border);
 		box-shadow:
 			inset 0 0 80px rgba(0, 0, 0, 0.3),
 			0 8px 24px rgba(0, 0, 0, 0.4);
@@ -350,27 +364,34 @@
 		border: none;
 		cursor: pointer;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+		transition: transform 0.1s, box-shadow 0.15s;
+	}
+	.action:active:not(:disabled) {
+		transform: scale(0.98);
 	}
 	.action.hit {
-		background: linear-gradient(180deg, #dc2626 0%, #b91c1c 100%);
+		background: linear-gradient(180deg, var(--b4n-hit) 0%, #a02e2e 100%);
 		color: #fff;
 	}
-	.action.hit:hover {
-		background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+	.action.hit:hover:not(:disabled) {
+		background: linear-gradient(180deg, var(--b4n-hit-hover) 0%, var(--b4n-hit) 100%);
+		box-shadow: 0 4px 14px rgba(199, 62, 62, 0.4);
 	}
 	.action.stand {
-		background: linear-gradient(180deg, #15803d 0%, #166534 100%);
+		background: linear-gradient(180deg, var(--b4n-stand) 0%, #235a38 100%);
 		color: #fff;
 	}
-	.action.stand:hover {
-		background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+	.action.stand:hover:not(:disabled) {
+		background: linear-gradient(180deg, var(--b4n-stand-hover) 0%, var(--b4n-stand) 100%);
+		box-shadow: 0 4px 14px rgba(45, 125, 74, 0.4);
 	}
 	.action.play-again {
-		background: linear-gradient(180deg, #b45309 0%, #92400e 100%);
-		color: #fff;
+		background: linear-gradient(180deg, var(--b4n-gold) 0%, var(--b4n-gold-dim) 100%);
+		color: #0a0f0d;
 	}
 	.action.play-again:hover:not(:disabled) {
-		background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+		background: linear-gradient(180deg, var(--b4n-gold-bright) 0%, var(--b4n-gold) 100%);
+		box-shadow: 0 4px 14px rgba(212, 168, 83, 0.4);
 	}
 	.action.play-again:disabled {
 		opacity: 0.8;
@@ -383,23 +404,24 @@
 		font-weight: 700;
 		font-size: 1.1rem;
 		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.9);
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.95);
 	}
 	.result-banner.win {
-		background: linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 163, 74, 0.3) 100%);
+		background: linear-gradient(135deg, rgba(61, 155, 92, 0.45) 0%, rgba(45, 125, 74, 0.35) 100%);
 		color: #86efac;
 	}
 	.result-banner:not(.win):not(.push) {
-		background: rgba(248, 113, 113, 0.25);
+		background: rgba(199, 62, 62, 0.3);
 		color: #fca5a5;
 	}
 	.result-banner.push {
-		background: rgba(234, 179, 8, 0.25);
+		background: rgba(201, 162, 39, 0.3);
 		color: #fde047;
 	}
 	.waiting {
 		margin-top: 0.75rem;
 		font-style: italic;
+		color: var(--b4n-text-muted);
 	}
 </style>

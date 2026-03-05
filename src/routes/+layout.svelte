@@ -1,4 +1,5 @@
 <script lang="ts">
+	import '../app.css';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -52,7 +53,10 @@
 {:else}
 	{#if $isLoggedIn}
 	<header class="header">
-		<div class="brand">Blackjack4Nostr</div>
+		<div class="brand">
+			<span class="brand-icon">♠</span>
+			Blackjack<span class="brand-accent">4Nostr</span>
+		</div>
 		<div class="user">
 			<span class="label">npub</span>
 			<code class="npub" title={$npub ?? ''}>{$npub ? $npub.slice(0, 5) + '…' + $npub.slice(-6) : ''}</code>
@@ -90,16 +94,30 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0.75rem 1rem;
-		background: #1e293b;
-		border-bottom: 1px solid #334155;
-		font-family: var(--font-sans, system-ui, sans-serif);
+		padding: 0.6rem 1.25rem;
+		background: var(--b4n-surface);
+		border-bottom: 1px solid var(--b4n-border);
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 		font-size: 0.9rem;
-		color: #f1f5f9;
+		color: var(--b4n-text);
 	}
 	.brand {
+		font-weight: 700;
+		font-size: 1.1rem;
+		letter-spacing: 0.02em;
+		color: var(--b4n-text-bright);
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.brand-icon {
+		color: var(--b4n-gold);
+		font-size: 1.2em;
+		opacity: 0.95;
+	}
+	.brand-accent {
+		color: var(--b4n-gold);
 		font-weight: 600;
-		color: #fff;
 	}
 	.user {
 		display: flex;
@@ -108,46 +126,49 @@
 		flex-wrap: wrap;
 	}
 	.user .label {
-		color: #94a3b8;
-		font-size: 0.75rem;
+		color: var(--b4n-text-muted);
+		font-size: 0.7rem;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
+		letter-spacing: 0.08em;
 	}
 	.npub {
-		font-size: 0.85em;
-		background: #334155;
-		color: #e2e8f0;
-		padding: 0.25em 0.5em;
+		font-family: var(--font-mono);
+		font-size: 0.8em;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-text);
+		padding: 0.3em 0.55em;
 		border-radius: 4px;
+		border: 1px solid var(--b4n-input-border);
 		white-space: nowrap;
 		overflow: hidden;
 		max-width: 10ch;
 	}
 	.balance {
 		font-weight: 600;
-		color: #e2e8f0;
+		color: var(--b4n-gold-dim);
 	}
 	.balance-err {
-		color: #f87171;
+		color: var(--b4n-lose);
 		font-size: 0.85em;
 	}
 	.logout {
-		padding: 0.35rem 0.6rem;
+		padding: 0.4rem 0.75rem;
 		font-size: 0.8rem;
-		background: #334155;
-		border: 1px solid #475569;
-		color: #cbd5e1;
+		background: transparent;
+		border: 1px solid var(--b4n-border);
+		color: var(--b4n-text-muted);
 		border-radius: 6px;
 		cursor: pointer;
+		font-weight: 500;
 	}
 	.logout:hover {
-		background: #475569;
-		color: #fff;
+		background: var(--b4n-surface-elevated);
+		color: var(--b4n-text);
+		border-color: var(--b4n-gold-muted);
 	}
 	.loading {
 		padding: 3rem;
 		text-align: center;
-		font-family: var(--font-sans, system-ui, sans-serif);
-		color: var(--muted, #888);
+		color: var(--b4n-text-muted);
 	}
 </style>

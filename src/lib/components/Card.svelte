@@ -20,8 +20,8 @@
 		height: var(--card-h);
 		min-width: var(--card-w);
 		min-height: var(--card-h);
-		background: linear-gradient(145deg, #fff 0%, #f1f5f9 100%);
-		border-radius: 6px;
+		background: linear-gradient(152deg, #faf8f5 0%, #f0ebe3 50%, #e8e2d9 100%);
+		border-radius: 8px;
 		box-shadow:
 			0 1px 2px rgba(0, 0, 0, 0.15),
 			0 4px 12px rgba(0, 0, 0, 0.2),
@@ -35,8 +35,8 @@
 		gap: 0.15rem;
 	}
 	.card.face-down {
-		background: linear-gradient(145deg, #1e3a5f 0%, #0f172a 50%, #1e293b 100%);
-		border-color: rgba(255, 255, 255, 0.1);
+		background: linear-gradient(152deg, #1a2520 0%, #121a16 50%, #0f1613 100%);
+		border-color: rgba(212, 168, 83, 0.25);
 		box-shadow:
 			0 1px 2px rgba(0, 0, 0, 0.3),
 			0 4px 12px rgba(0, 0, 0, 0.25),
@@ -52,11 +52,11 @@
 		font-weight: 700;
 		line-height: 1;
 		user-select: none;
-		color: #0f172a;
-		font-family: system-ui, sans-serif;
+		color: #0f1613;
+		font-family: var(--font-display, system-ui, sans-serif);
 	}
 	.card.red-suit .label {
-		color: #dc2626;
+		color: #b91c1c;
 	}
 	.card.face-down .symbol,
 	.card.face-down .label {

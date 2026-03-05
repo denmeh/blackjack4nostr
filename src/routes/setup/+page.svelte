@@ -88,7 +88,7 @@
 
 <main class="wizard">
 	<div class="wizard-header">
-		<h1>Setup</h1>
+		<h1><span class="brand-icon">♠</span> Setup</h1>
 		<p class="sub">Connect your Nostr identity and wallet.</p>
 	</div>
 
@@ -183,38 +183,46 @@
 <style>
 	.wizard {
 		min-height: 100vh;
-		background: #0f172a;
-		font-family: var(--font-sans, system-ui, sans-serif);
-		color: #f1f5f9;
-		padding: 1rem;
+		background: var(--b4n-bg);
+		color: var(--b4n-text);
+		padding: 1.5rem 1rem;
 	}
 	.wizard-header {
 		max-width: 28rem;
 		margin: 0 auto 1.5rem;
+		text-align: center;
 	}
 	.wizard-header h1 {
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: #fff;
-		margin: 0 0 0.25rem 0;
+		font-size: 1.6rem;
+		font-weight: 700;
+		color: var(--b4n-text-bright);
+		margin: 0 0 0.35rem 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+	}
+	.brand-icon {
+		color: var(--b4n-gold);
 	}
 	.sub {
-		color: #94a3b8;
-		font-size: 0.9rem;
+		color: var(--b4n-text-muted);
+		font-size: 0.95rem;
 		margin: 0;
 	}
 	.card {
 		max-width: 28rem;
 		margin: 0 auto;
-		background: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 8px;
+		background: var(--b4n-surface);
+		border: 1px solid var(--b4n-border);
+		border-radius: 12px;
 		padding: 1.5rem;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 	}
 	.card-title {
-		font-size: 1rem;
+		font-size: 1.05rem;
 		font-weight: 600;
-		color: #e2e8f0;
+		color: var(--b4n-text-bright);
 		margin: 0 0 1rem 0;
 	}
 	.tabs {
@@ -225,95 +233,108 @@
 	.tab {
 		padding: 0.5rem 0.75rem;
 		font-size: 0.9rem;
-		border: 1px solid #334155;
-		background: #334155;
-		color: #cbd5e1;
-		border-radius: 6px;
+		border: 1px solid var(--b4n-border);
+		background: var(--b4n-surface-elevated);
+		color: var(--b4n-text-muted);
+		border-radius: 8px;
 		cursor: pointer;
+		font-weight: 500;
 	}
 	.tab:hover {
-		background: #475569;
-		color: #e2e8f0;
+		background: var(--b4n-gold-muted);
+		color: var(--b4n-text);
+		border-color: var(--b4n-gold-dim);
 	}
 	.tab.active {
-		background: #475569;
-		border-color: #64748b;
-		color: #fff;
+		background: var(--b4n-gold-muted);
+		border-color: var(--b4n-gold-dim);
+		color: var(--b4n-gold-bright);
 	}
 	.hint {
 		font-size: 0.875rem;
-		color: #94a3b8;
+		color: var(--b4n-text-muted);
 		margin-bottom: 1rem;
-		line-height: 1.45;
+		line-height: 1.5;
 	}
 	.hint code {
+		font-family: var(--font-mono);
 		font-size: 0.8em;
-		background: #334155;
-		color: #e2e8f0;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-gold-dim);
 		padding: 0.15em 0.4em;
 		border-radius: 4px;
+		border: 1px solid var(--b4n-input-border);
 	}
 	label {
 		display: block;
-		font-size: 0.8rem;
+		font-size: 0.75rem;
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		color: #94a3b8;
-		margin-bottom: 0.35rem;
+		letter-spacing: 0.06em;
+		color: var(--b4n-text-muted);
+		margin-bottom: 0.4rem;
 	}
 	input,
 	textarea {
 		width: 100%;
 		padding: 0.6rem 0.75rem;
 		font-size: 1rem;
-		border: 1px solid #334155;
-		border-radius: 6px;
-		background: #334155;
-		color: #e2e8f0;
+		border: 1px solid var(--b4n-input-border);
+		border-radius: 8px;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-text);
 		margin-bottom: 1rem;
 		box-sizing: border-box;
 	}
+	input:focus,
+	textarea:focus {
+		outline: none;
+		border-color: var(--b4n-gold-muted);
+		box-shadow: 0 0 0 2px rgba(212, 168, 83, 0.12);
+	}
 	input::placeholder,
 	textarea::placeholder {
-		color: #64748b;
+		color: var(--b4n-text-muted);
 	}
 	textarea {
 		resize: vertical;
 		min-height: 4rem;
 	}
 	.error {
-		color: #f87171;
+		color: var(--b4n-lose);
 		font-size: 0.9rem;
 		margin-bottom: 0.75rem;
 	}
 	.btn {
-		padding: 0.6rem 1rem;
-		font-size: 0.9rem;
-		border-radius: 6px;
+		padding: 0.65rem 1rem;
+		font-size: 0.95rem;
+		border-radius: 8px;
 		cursor: pointer;
-		font-weight: 500;
+		font-weight: 600;
 		border: none;
 	}
 	.btn-primary {
 		width: 100%;
-		background: #3b82f6;
-		color: #fff;
+		background: linear-gradient(180deg, var(--b4n-gold) 0%, var(--b4n-gold-dim) 100%);
+		color: #0a0f0d;
+		box-shadow: 0 2px 8px rgba(212, 168, 83, 0.3);
 	}
 	.btn-primary:hover:not(:disabled) {
-		background: #2563eb;
+		background: linear-gradient(180deg, var(--b4n-gold-bright) 0%, var(--b4n-gold) 100%);
+		box-shadow: 0 4px 12px rgba(212, 168, 83, 0.35);
 	}
 	.btn-primary:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
 	}
 	.btn-secondary {
-		background: #334155;
-		border: 1px solid #475569;
-		color: #cbd5e1;
+		background: var(--b4n-surface-elevated);
+		border: 1px solid var(--b4n-border);
+		color: var(--b4n-text);
 	}
 	.btn-secondary:hover {
-		background: #475569;
-		color: #fff;
+		background: var(--b4n-gold-muted);
+		border-color: var(--b4n-gold-dim);
+		color: var(--b4n-text-bright);
 	}
 	.row {
 		display: flex;

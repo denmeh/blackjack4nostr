@@ -13,7 +13,7 @@
 	import type { GameJoinPayload, GameActionPayload, GamePlayAgainPayload } from '$lib/protocol';
 	import type { Card } from '$lib/protocol';
 	import GameCard from '$lib/components/Card.svelte';
-	import { DEFAULT_RELAYS } from '$lib/protocol/link';
+	import { DEFAULT_RELAYS, buildGameLink } from '$lib/protocol/link';
 
 	const gameId = $page.params.id as string;
 	const role = $page.url.searchParams.get('role'); // 'dealer'
@@ -49,15 +49,7 @@
 		if (npubStored && relayList.length) {
 			const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('b4n_token_' + gameId) : null;
 			if (token) {
-				shareUrl.set(
-					(typeof window !== 'undefined' ? window.location.origin : '') +
-						'/join?npub=' +
-						encodeURIComponent(npubStored) +
-						'&token=' +
-						encodeURIComponent(token) +
-						'&relays=' +
-						encodeURIComponent(relayList.join(','))
-				);
+				shareUrl.set(buildGameLink({ npub: npubStored, token, relays: relayList }));
 			}
 		}
 		startSubscriptions();
@@ -173,17 +165,17 @@
 </svelte:head>
 
 <main class="game-page">
-	<h1>Dealer — Game</h1>
+	<h1><span class="page-icon">♠</span> Dealer — Game</h1>
 
 	{#if $status === 'error'}
 		<p class="error">{$error}</p>
 		<a href="/">Back to dashboard</a>
 	{:else if $status === 'waiting'}
-		<p class="muted">Waiting for a player to join. Share this link:</p>
+		<p class="muted">Waiting for a player. Share this <strong>B4N link</strong> (<code>blackjack4nostr://</code>):</p>
 		{#if $shareUrl}
 			<div class="share-row">
-				<input type="text" readonly value={$shareUrl} />
-				<button onclick={copyLink}>Copy</button>
+				<input type="text" readonly value={$shareUrl} aria-label="Game link" />
+				<button class="btn btn-gold" onclick={copyLink}>Copy</button>
 			</div>
 		{:else}
 			<p class="muted">Open this page from the dashboard after hosting to get the share link.</p>
@@ -239,42 +231,61 @@
 
 <style>
 	.game-page {
-		max-width: 24rem;
+		max-width: 28rem;
 		margin: 0 auto;
 		padding: 1.5rem;
-		font-family: system-ui, sans-serif;
-		color: #f1f5f9;
+		color: var(--b4n-text);
 	}
 	h1 {
-		font-size: 1.25rem;
+		font-size: 1.3rem;
+		font-weight: 600;
 		margin-bottom: 1rem;
+		color: var(--b4n-text-bright);
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+	}
+	.page-icon {
+		color: var(--b4n-gold);
 	}
 	.muted {
-		color: #94a3b8;
+		color: var(--b4n-text-muted);
 		font-size: 0.9rem;
+	}
+	.muted code {
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-gold-dim);
+		padding: 0.1em 0.35em;
+		border-radius: 4px;
 	}
 	.small {
 		font-size: 0.8rem;
 		margin-top: 0.5rem;
 	}
 	.error {
-		color: #f87171;
+		color: var(--b4n-lose);
 		font-size: 0.9rem;
 		margin: 0.5rem 0;
 	}
 	.relay-warning {
 		margin-top: 0.75rem;
 		padding: 0.5rem 0.75rem;
-		background: rgba(234, 179, 8, 0.2);
-		border-radius: 6px;
-		color: #fde047;
+		background: rgba(201, 162, 39, 0.15);
+		border: 1px solid var(--b4n-push);
+		border-radius: 8px;
+		color: var(--b4n-gold-dim);
 		font-size: 0.85rem;
 	}
 	.back {
 		display: inline-block;
 		margin-top: 1rem;
-		color: #94a3b8;
+		color: var(--b4n-text-muted);
 		font-size: 0.9rem;
+	}
+	.back:hover {
+		color: var(--b4n-gold-dim);
 	}
 	.share-row {
 		display: flex;
@@ -283,35 +294,40 @@
 	}
 	.share-row input {
 		flex: 1;
-		padding: 0.5rem;
+		padding: 0.55rem 0.75rem;
 		font-size: 0.8rem;
-		background: #0f172a;
-		border: 1px solid #334155;
-		border-radius: 6px;
-		color: #e2e8f0;
+		font-family: var(--font-mono);
+		background: var(--b4n-input-bg);
+		border: 1px solid var(--b4n-input-border);
+		border-radius: 8px;
+		color: var(--b4n-text);
 	}
-	button {
+	.btn {
 		padding: 0.5rem 1rem;
 		font-size: 0.9rem;
+		font-weight: 600;
 		cursor: pointer;
-		background: #475569;
 		border: none;
-		border-radius: 6px;
-		color: #fff;
+		border-radius: 8px;
+		flex-shrink: 0;
 	}
-	button:hover {
-		background: #64748b;
+	.btn-gold {
+		background: linear-gradient(180deg, var(--b4n-gold) 0%, var(--b4n-gold-dim) 100%);
+		color: #0a0f0d;
+	}
+	.btn-gold:hover {
+		background: linear-gradient(180deg, var(--b4n-gold-bright) 0%, var(--b4n-gold) 100%);
 	}
 	.game {
-		background: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 10px;
+		background: var(--b4n-surface);
+		border: 1px solid var(--b4n-border);
+		border-radius: 12px;
 		padding: 1.25rem;
 		margin: 1rem 0;
 	}
 	.game.table {
-		background: linear-gradient(160deg, #0d2818 0%, #134a2a 40%, #0f3320 100%);
-		border: 3px solid #1a4722;
+		background: linear-gradient(160deg, var(--b4n-felt) 0%, var(--b4n-felt-light) 40%, #0f3320 100%);
+		border: 3px solid var(--b4n-felt-border);
 		box-shadow:
 			inset 0 0 80px rgba(0, 0, 0, 0.3),
 			0 8px 24px rgba(0, 0, 0, 0.4);
@@ -322,7 +338,7 @@
 	.label {
 		display: block;
 		font-size: 0.75rem;
-		color: rgba(255, 255, 255, 0.7);
+		color: rgba(255, 255, 255, 0.75);
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
 		margin-bottom: 0.5rem;
@@ -335,7 +351,7 @@
 	}
 	.value {
 		font-size: 0.9rem;
-		color: rgba(255, 255, 255, 0.9);
+		color: rgba(255, 255, 255, 0.95);
 		margin-top: 0.35rem;
 		font-weight: 600;
 	}
@@ -346,19 +362,19 @@
 		font-weight: 700;
 		font-size: 1.1rem;
 		border-radius: 8px;
-		background: rgba(255, 255, 255, 0.1);
-		color: rgba(255, 255, 255, 0.9);
+		background: rgba(255, 255, 255, 0.08);
+		color: rgba(255, 255, 255, 0.95);
 	}
 	.result-banner.win {
-		background: linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 163, 74, 0.3) 100%);
+		background: linear-gradient(135deg, rgba(61, 155, 92, 0.45) 0%, rgba(45, 125, 74, 0.35) 100%);
 		color: #86efac;
 	}
 	.result-banner:not(.win):not(.push) {
-		background: rgba(248, 113, 113, 0.25);
+		background: rgba(199, 62, 62, 0.3);
 		color: #fca5a5;
 	}
 	.result-banner.push {
-		background: rgba(234, 179, 8, 0.25);
+		background: rgba(201, 162, 39, 0.3);
 		color: #fde047;
 	}
 </style>

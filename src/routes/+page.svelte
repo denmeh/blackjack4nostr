@@ -87,13 +87,15 @@
 </script>
 
 <main class="dashboard">
-	<h1>Blackjack4Nostr</h1>
-	<p class="subtitle">Provably fair blackjack over Nostr. Host a game or join with a link.</p>
+	<div class="hero">
+		<h1><span class="hero-icon">♠</span> Blackjack<span class="hero-accent">4Nostr</span></h1>
+		<p class="subtitle">Provably fair blackjack on Nostr. Host a table or join with a link.</p>
+	</div>
 
 	<section class="card host">
-		<h2>Host a game</h2>
-		<p>Create a game and share the link. You’re the dealer. Games use relays that allow custom event kinds (30400–30403).</p>
-		<button onclick={hostGame} disabled={hostLoading}>
+		<h2><span class="card-icon">♦</span> Host a game</h2>
+		<p>Create a table and share the <code>blackjack4nostr://</code> link. You’re the dealer.</p>
+		<button class="btn btn-gold" onclick={hostGame} disabled={hostLoading}>
 			{#if hostLoading}
 				Creating…
 			{:else}
@@ -106,8 +108,8 @@
 	</section>
 
 	<section class="card join">
-		<h2>Join a game</h2>
-		<p>Paste a game link (e.g. blackjack4nostr://… or the web join URL).</p>
+		<h2><span class="card-icon">♥</span> Join a game</h2>
+		<p>Paste a game link — <code>blackjack4nostr://npub1…?relays=…&token=…</code></p>
 		<div class="join-row">
 			<input
 				type="text"
@@ -115,79 +117,138 @@
 				bind:value={joinLinkInput}
 				onkeydown={(e) => e.key === 'Enter' && joinViaLink()}
 			/>
-			<button onclick={joinViaLink} disabled={!joinLinkInput.trim()}>Join</button>
+			<button class="btn btn-primary" onclick={joinViaLink} disabled={!joinLinkInput.trim()}>Join</button>
 		</div>
 	</section>
 </main>
 
 <style>
 	.dashboard {
-		max-width: 28rem;
+		max-width: 32rem;
 		margin: 0 auto;
-		padding: 1.5rem;
-		font-family: system-ui, sans-serif;
-		color: #f1f5f9;
+		padding: 2rem 1.5rem;
+		color: var(--b4n-text);
 	}
-	h1 {
-		font-size: 1.5rem;
-		margin-bottom: 0.25rem;
+	.hero {
+		text-align: center;
+		margin-bottom: 2rem;
+	}
+	.hero h1 {
+		font-size: 1.85rem;
+		font-weight: 700;
+		margin: 0 0 0.4rem 0;
+		letter-spacing: 0.02em;
+		color: var(--b4n-text-bright);
+	}
+	.hero-icon {
+		color: var(--b4n-gold);
+		margin-right: 0.15em;
+	}
+	.hero-accent {
+		color: var(--b4n-gold);
+		font-weight: 600;
 	}
 	.subtitle {
-		color: #94a3b8;
-		font-size: 0.9rem;
-		margin-bottom: 1.5rem;
+		color: var(--b4n-text-muted);
+		font-size: 0.95rem;
+		margin: 0;
+		line-height: 1.45;
 	}
 	.card {
-		background: #1e293b;
-		border: 1px solid #334155;
-		border-radius: 10px;
-		padding: 1.25rem;
-		margin-bottom: 1rem;
+		background: var(--b4n-surface);
+		border: 1px solid var(--b4n-border);
+		border-radius: 12px;
+		padding: 1.5rem;
+		margin-bottom: 1.25rem;
+		box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 	}
 	.card h2 {
-		font-size: 1.1rem;
-		margin-bottom: 0.35rem;
+		font-size: 1.15rem;
+		font-weight: 600;
+		margin: 0 0 0.5rem 0;
+		color: var(--b4n-text-bright);
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.card-icon {
+		color: var(--b4n-gold);
+		opacity: 0.9;
 	}
 	.card p {
-		color: #94a3b8;
-		font-size: 0.85rem;
-		margin-bottom: 0.75rem;
+		color: var(--b4n-text-muted);
+		font-size: 0.9rem;
+		margin-bottom: 1rem;
+		line-height: 1.5;
 	}
-	button {
-		padding: 0.5rem 1rem;
+	.card p code {
+		font-family: var(--font-mono);
+		font-size: 0.85em;
+		background: var(--b4n-input-bg);
+		color: var(--b4n-gold-dim);
+		padding: 0.15em 0.4em;
+		border-radius: 4px;
+		border: 1px solid var(--b4n-input-border);
+	}
+	.btn {
+		padding: 0.65rem 1.25rem;
 		font-size: 0.95rem;
+		font-weight: 600;
 		cursor: pointer;
-		background: #475569;
 		border: none;
-		border-radius: 6px;
+		border-radius: 8px;
+		transition: background 0.15s, transform 0.1s;
+	}
+	.btn:active:not(:disabled) {
+		transform: scale(0.98);
+	}
+	.btn-gold {
+		width: 100%;
+		background: linear-gradient(180deg, var(--b4n-gold) 0%, var(--b4n-gold-dim) 100%);
+		color: #0a0f0d;
+		box-shadow: 0 2px 8px rgba(212, 168, 83, 0.35);
+	}
+	.btn-gold:hover:not(:disabled) {
+		background: linear-gradient(180deg, var(--b4n-gold-bright) 0%, var(--b4n-gold) 100%);
+		box-shadow: 0 4px 12px rgba(212, 168, 83, 0.4);
+	}
+	.btn-primary {
+		background: var(--b4n-stand);
 		color: #fff;
+		flex-shrink: 0;
 	}
-	button:hover:not(:disabled) {
-		background: #64748b;
+	.btn-primary:hover:not(:disabled) {
+		background: var(--b4n-stand-hover);
 	}
-	button:disabled {
-		opacity: 0.7;
+	.btn:disabled {
+		opacity: 0.6;
 		cursor: not-allowed;
 	}
 	.error {
-		color: #f87171;
-		font-size: 0.85rem;
-		margin-top: 0.5rem;
+		color: var(--b4n-lose);
+		font-size: 0.9rem;
+		margin-top: 0.75rem;
 	}
 	.join-row {
 		display: flex;
-		gap: 0.5rem;
+		gap: 0.6rem;
 	}
 	.join-row input {
 		flex: 1;
-		padding: 0.5rem 0.75rem;
+		padding: 0.6rem 0.85rem;
 		font-size: 0.9rem;
-		background: #0f172a;
-		border: 1px solid #334155;
-		border-radius: 6px;
-		color: #f1f5f9;
+		font-family: var(--font-mono);
+		background: var(--b4n-input-bg);
+		border: 1px solid var(--b4n-input-border);
+		border-radius: 8px;
+		color: var(--b4n-text);
 	}
 	.join-row input::placeholder {
-		color: #64748b;
+		color: var(--b4n-text-muted);
+	}
+	.join-row input:focus {
+		outline: none;
+		border-color: var(--b4n-gold-muted);
+		box-shadow: 0 0 0 2px rgba(212, 168, 83, 0.15);
 	}
 </style>
