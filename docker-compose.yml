@@ -1,0 +1,6 @@
+services:
+  blackjack:
+    image: denmeh/blackjack4nostr:0.1.0
+    ports:
+      - "6776:3000"
+    restart: unless-stopped
