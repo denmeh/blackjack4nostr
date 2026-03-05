@@ -40,3 +40,48 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Deploying with Docker
+
+The app is configured for deployment as a Docker image using `adapter-node`.
+
+**Build the image:**
+
+```sh
+docker build -t blackjack4nostr .
+```
+
+**Run the container:**
+
+```sh
+docker run -p 3000:3000 blackjack4nostr
+```
+
+Then open http://localhost:3000. To run in the background and set the port:
+
+```sh
+docker run -d -p 8080:3000 --name blackjack blackjack4nostr
+```
+
+The server listens on port 3000 inside the container; use `-p HOST_PORT:3000` to map it.
+
+### Pubblicare su Docker Hub (release)
+
+Al push di un **tag** che inizia con `v` (es. `v1.0.0`), GitHub Actions costruisce l’immagine e la pubblica su Docker Hub come `denmeh/blackjack4nostr:<version>` e `denmeh/blackjack4nostr:latest`.
+
+1. **Secret nel repo GitHub** (Settings → Secrets and variables → Actions):
+   - `DOCKERHUB_USERNAME`: il tuo username Docker Hub (es. `denmeh`)
+   - `DOCKERHUB_TOKEN`: un [Access Token](https://hub.docker.com/settings/security) Docker Hub (non la password)
+
+2. **Creare una release** (es. versione 1.0.0):
+
+   ```sh
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+
+   Dopo il workflow verrà pubblicata l’immagine:
+   - `denmeh/blackjack4nostr:1.0.0`
+   - `denmeh/blackjack4nostr:latest`
+
+   Per usarla: `docker run -p 3000:3000 denmeh/blackjack4nostr:1.0.0`
